@@ -1052,8 +1052,8 @@ def get_since_until(
             relative_start - relativedelta(yearday=1),  # type: ignore
             relative_end,
         ),
-        "'Five year',": (
-            relative_start - relativedelta(yearday=5),  # type: ignore
+        "Five year": (
+            relative_start - relativedelta(years=5) - relativedelta(yearday=1),  # type: ignore
             relative_end,
         ),
     }
