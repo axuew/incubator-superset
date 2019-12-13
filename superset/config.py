@@ -20,6 +20,8 @@ All configuration in this file can be overridden by providing a superset_config
 in your PYTHONPATH as there is a ``from superset_config import *``
 at the end of this file.
 """
+# -*- coding: gbk -*-
+
 import imp
 import importlib.util
 import json
@@ -29,6 +31,10 @@ import sys
 from collections import OrderedDict
 from datetime import date
 from typing import Any, Callable, Dict, List, Optional
+
+import redis
+from werkzeug.contrib.cache import RedisCache
+from flask import Blueprint
 
 from celery.schedules import crontab
 from dateutil import tz
@@ -95,8 +101,8 @@ SUPERSET_WORKERS = 2  # deprecated
 SUPERSET_CELERY_WORKERS = 32  # deprecated
 
 SUPERSET_WEBSERVER_PROTOCOL = "http"
-SUPERSET_WEBSERVER_ADDRESS = "0.0.0.0"
-SUPERSET_WEBSERVER_PORT = 8088
+SUPERSET_WEBSERVER_ADDRESS = "172.16.97.141"
+SUPERSET_WEBSERVER_PORT = 9521
 
 # This is an important setting, and should be lower than your
 # [load balancer / proxy / envoy / kong / ...] timeout settings.
@@ -115,7 +121,8 @@ SECRET_KEY = (
 )
 
 # The SQLAlchemy connection string.
-SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(DATA_DIR, "superset.db")
+# SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(DATA_DIR, "superset.db")
+SQLALCHEMY_DATABASE_URI = 'mysql://superset:superset@172.16.97.142/superset'
 # SQLALCHEMY_DATABASE_URI = 'mysql://myapp@localhost/myapp'
 # SQLALCHEMY_DATABASE_URI = 'postgresql://root:password@localhost/myapp'
 
@@ -156,10 +163,11 @@ PROXY_FIX_CONFIG = {"x_for": 1, "x_proto": 1, "x_host": 1, "x_port": 1, "x_prefi
 # GLOBALS FOR APP Builder
 # ------------------------------
 # Uncomment to setup Your App name
-APP_NAME = "Superset"
+APP_NAME = "联塑数据展示平台"
 
 # Uncomment to setup an App icon
-APP_ICON = "/static/assets/images/superset-logo@2x.png"
+APP_ICON = "/static/assets/images/lesso_logo@2x.png"
+# APP_ICON = "/static/assets/images/superset-logo@2x.png"
 APP_ICON_WIDTH = 126
 
 # Uncomment to specify where clicking the logo would take the user
@@ -228,7 +236,7 @@ PUBLIC_ROLE_LIKE_GAMMA = False
 # Babel config for translations
 # ---------------------------------------------------
 # Setup default language
-BABEL_DEFAULT_LOCALE = "en"
+BABEL_DEFAULT_LOCALE = "zh"
 # Your application default translation path
 BABEL_DEFAULT_FOLDER = "superset/translations"
 # The allowed translation for you app
@@ -261,7 +269,87 @@ DEFAULT_FEATURE_FLAGS = {
 }
 
 # This is merely a default.
-FEATURE_FLAGS: Dict[str, bool] = {}
+# FEATURE_FLAGS: Dict[str, bool] = {}
+FEATURE_FLAGS = {
+    # Configuration for scheduling queries from SQL Lab. This information is
+    # collected when the user clicks "Schedule query", and saved into the `extra`
+    # field of saved queries.
+    # See: https://github.com/mozilla-services/react-jsonschema-form
+    'SCHEDULED_QUERIES': {
+        'JSONSCHEMA': {
+            'title': 'Schedule',
+            'description': (
+                'In order to schedule a query, you need to specify when it '
+                'should start running, when it should stop running, and how '
+                'often it should run. You can also optionally specify '
+                'dependencies that should be met before the query is '
+                'executed. Please read the documentation for best practices '
+                'and more information on how to specify dependencies.'
+            ),
+            'type': 'object',
+            'properties': {
+                'output_table': {
+                    'type': 'string',
+                    'title': 'Output table name',
+                },
+                'start_date': {
+                    'type': 'string',
+                    'title': 'Start date',
+                    # date-time is parsed using the chrono library, see
+                    # https://www.npmjs.com/package/chrono-node#usage
+                    'format': 'date-time',
+                    'default': 'tomorrow at 9am',
+                },
+                'end_date': {
+                    'type': 'string',
+                    'title': 'End date',
+                    # date-time is parsed using the chrono library, see
+                    # https://www.npmjs.com/package/chrono-node#usage
+                    'format': 'date-time',
+                    'default': '9am in 30 days',
+                },
+                'schedule_interval': {
+                    'type': 'string',
+                    'title': 'Schedule interval',
+                },
+                'dependencies': {
+                    'type': 'array',
+                    'title': 'Dependencies',
+                    'items': {
+                        'type': 'string',
+                    },
+                },
+            },
+        },
+        'UISCHEMA': {
+            'schedule_interval': {
+                'ui:placeholder': '@daily, @weekly, etc.',
+            },
+            'dependencies': {
+                'ui:help': (
+                    'Check the documentation for the correct format when '
+                    'defining dependencies.'
+                ),
+            },
+        },
+        'VALIDATION': [
+            # ensure that start_date <= end_date
+            {
+                'name': 'less_equal',
+                'arguments': ['start_date', 'end_date'],
+                'message': 'End date cannot be before start date',
+                # this is where the error message is shown
+                'container': 'end_date',
+            },
+        ],
+        # link to the scheduler; this example links to an Airflow pipeline
+        # that uses the query id and the output table as its name
+        'linkback': (
+            'https://airflow.example.com/admin/airflow/tree?'
+            'dag_id=query_${id}_${extra_json.schedule_info.output_table}'
+        ),
+    },
+}
 
 # A function that receives a dict of all feature flags
 # (DEFAULT_FEATURE_FLAGS merged with FEATURE_FLAGS)
@@ -294,7 +382,14 @@ IMG_UPLOAD_URL = "/static/uploads/"
 # IMG_SIZE = (300, 200, True)
 
 CACHE_DEFAULT_TIMEOUT = 60 * 60 * 24
-CACHE_CONFIG: Dict[str, Any] = {"CACHE_TYPE": "null"}
+CACHE_CONFIG = {
+    'CACHE_TYPE': 'redis',
+    'CACHE_REDIS_HOST': '172.29.15.46',
+    'CACHE_REDIS_PORT': '6379',
+    'CACHE_KEY_PREFIX': 'superset_results',
+    'CACHE_REDIS_URL': 'redis://172.16.97.141:6379/'
+}
+# CACHE_CONFIG: Dict[str, Any] = {"CACHE_TYPE": "null"}
 TABLE_NAMES_CACHE_CONFIG = {"CACHE_TYPE": "null"}
 
 # CORS Options
@@ -439,19 +534,21 @@ WARNING_MSG = None
 
 
 class CeleryConfig(object):  # pylint: disable=too-few-public-methods
-    BROKER_URL = "sqla+sqlite:///celerydb.sqlite"
+    BROKER_URL = "redis://172.16.97.141:6379/0"
     CELERY_IMPORTS = ("superset.sql_lab", "superset.tasks")
-    CELERY_RESULT_BACKEND = "db+sqlite:///celery_results.sqlite"
+    CELERY_RESULT_BACKEND = "redis://172.16.97.141:6379/0"
     CELERYD_LOG_LEVEL = "DEBUG"
     CELERYD_PREFETCH_MULTIPLIER = 1
     CELERY_ACKS_LATE = False
     CELERY_ANNOTATIONS = {
-        "sql_lab.get_sql_results": {"rate_limit": "100/s"},
-        "email_reports.send": {
-            "rate_limit": "1/s",
-            "time_limit": 120,
-            "soft_time_limit": 150,
-            "ignore_result": True,
+        'sql_lab.get_sql_results': {
+            'rate_limit': '100/s',
+        },
+        'email_reports.send': {
+            'rate_limit': '1/s',
+            'time_limit': 120,
+            'soft_time_limit': 150,
+            'ignore_result': True,
         },
     }
     CELERYBEAT_SCHEDULE = {
@@ -502,8 +599,9 @@ SQLLAB_QUERY_COST_ESTIMATE_TIMEOUT = 10  # seconds
 # An instantiated derivative of werkzeug.contrib.cache.BaseCache
 # if enabled, it can be used to store the results of long-running queries
 # in SQL Lab by using the "Run Async" button/feature
-RESULTS_BACKEND = None
-
+# RESULTS_BACKEND = None
+RESULTS_BACKEND = RedisCache(
+    host='172.16.97.141', port=6379, key_prefix='superset_results')
 # Use PyArrow and MessagePack for async query results serialization,
 # rather than JSON. This feature requires additional testing from the
 # community before it is fully adopted, so this config option is provided
@@ -671,7 +769,7 @@ WEBDRIVER_WINDOW = {"dashboard": (1600, 2000), "slice": (3000, 1200)}
 WEBDRIVER_CONFIGURATION: Dict[Any, Any] = {}
 
 # The base URL to query for accessing the user interface
-WEBDRIVER_BASEURL = "http://0.0.0.0:8080/"
+WEBDRIVER_BASEURL = "http://172.16.97.124:9521/"
 
 # Send user to a link where they can report bugs
 BUG_REPORT_URL = None
@@ -762,3 +860,37 @@ elif importlib.util.find_spec("superset_config"):
     except Exception:
         logging.exception("Found but failed to import local superset_config")
         raise
+
+
+class ReverseProxied(object):
+
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        script_name = environ.get('HTTP_X_SCRIPT_NAME', '')
+        if script_name:
+            environ['SCRIPT_NAME'] = script_name
+            path_info = environ['PATH_INFO']
+            if path_info.startswith(script_name):
+                environ['PATH_INFO'] = path_info[len(script_name):]
+
+        scheme = environ.get('HTTP_X_SCHEME', '')
+        if scheme:
+            environ['wsgi.url_scheme'] = scheme
+        return self.app(environ, start_response)
+
+
+ADDITIONAL_MIDDLEWARE = [ReverseProxied, ]
+
+simple_page = Blueprint('simple_page', __name__,
+                        template_folder='templates')
+
+
+@simple_page.route('/', defaults={'page': 'index'})
+@simple_page.route('/<page>')
+def show(page):
+    return "Ok! Welcome superset."
+
+
+BLUEPRINTS = [simple_page]
