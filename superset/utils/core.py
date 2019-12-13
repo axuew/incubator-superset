@@ -64,7 +64,6 @@ try:
 except ImportError:
     pass
 
-
 logging.getLogger("MARKDOWN").setLevel(logging.INFO)
 
 DTTM_ALIAS = "__timestamp"
@@ -160,7 +159,7 @@ def memoized(func=None, watch=None):
 
 
 def parse_js_uri_path_item(
-    item: Optional[str], unquote: bool = True, eval_undefined: bool = False
+        item: Optional[str], unquote: bool = True, eval_undefined: bool = False
 ) -> Optional[str]:
     """Parse a uri path item made with js.
 
@@ -524,8 +523,8 @@ def generic_find_fk_constraint_name(table, columns, referenced, insp):
     """Utility to find a foreign-key constraint name in alembic migrations"""
     for fk in insp.get_foreign_keys(table):
         if (
-            fk["referred_table"] == referenced
-            and set(fk["referred_columns"]) == columns
+                fk["referred_table"] == referenced
+                and set(fk["referred_columns"]) == columns
         ):
             return fk["name"]
 
@@ -536,8 +535,8 @@ def generic_find_fk_constraint_names(table, columns, referenced, insp):
 
     for fk in insp.get_foreign_keys(table):
         if (
-            fk["referred_table"] == referenced
-            and set(fk["referred_columns"]) == columns
+                fk["referred_table"] == referenced
+                and set(fk["referred_columns"]) == columns
         ):
             names.add(fk["name"])
 
@@ -674,17 +673,17 @@ def notify_user_about_perm_udate(granter, user, role, datasource, tpl_name, conf
 
 
 def send_email_smtp(
-    to,
-    subject,
-    html_content,
-    config,
-    files=None,
-    data=None,
-    images=None,
-    dryrun=False,
-    cc=None,
-    bcc=None,
-    mime_subtype="mixed",
+        to,
+        subject,
+        html_content,
+        config,
+        files=None,
+        data=None,
+        images=None,
+        dryrun=False,
+        cc=None,
+        bcc=None,
+        mime_subtype="mixed",
 ):
     """
     Send an email with html content, eg:
@@ -850,7 +849,7 @@ def merge_extra_filters(form_data: dict):
         # [column_name in list_of_values]. `__` prefix is there to avoid
         # potential conflicts with column that would be named `from` or `to`
         if "adhoc_filters" not in form_data or not isinstance(
-            form_data["adhoc_filters"], list
+                form_data["adhoc_filters"], list
         ):
             form_data["adhoc_filters"] = []
         date_options = {
@@ -860,6 +859,7 @@ def merge_extra_filters(form_data: dict):
             "__time_origin": "druid_time_origin",
             "__granularity": "granularity",
         }
+
         # Grab list of existing filters 'keyed' on the column and operator
 
         def get_filter_key(f):
@@ -871,9 +871,9 @@ def merge_extra_filters(form_data: dict):
         existing_filters = {}
         for existing in form_data["adhoc_filters"]:
             if (
-                existing["expressionType"] == "SIMPLE"
-                and existing["comparator"] is not None
-                and existing["subject"] is not None
+                    existing["expressionType"] == "SIMPLE"
+                    and existing["comparator"] is not None
+                    and existing["subject"] is not None
             ):
                 existing_filters[get_filter_key(existing)] = existing["comparator"]
 
@@ -960,19 +960,19 @@ def get_example_database():
 
 def is_adhoc_metric(metric) -> bool:
     return (
-        isinstance(metric, dict)
-        and (
-            (
-                metric["expressionType"] == ADHOC_METRIC_EXPRESSION_TYPES["SIMPLE"]
-                and metric["column"]
-                and metric["aggregate"]
+            isinstance(metric, dict)
+            and (
+                    (
+                            metric["expressionType"] == ADHOC_METRIC_EXPRESSION_TYPES["SIMPLE"]
+                            and metric["column"]
+                            and metric["aggregate"]
+                    )
+                    or (
+                            metric["expressionType"] == ADHOC_METRIC_EXPRESSION_TYPES["SQL"]
+                            and metric["sqlExpression"]
+                    )
             )
-            or (
-                metric["expressionType"] == ADHOC_METRIC_EXPRESSION_TYPES["SQL"]
-                and metric["sqlExpression"]
-            )
-        )
-        and metric["label"]
+            and metric["label"]
     )
 
 
@@ -993,12 +993,12 @@ def ensure_path_exists(path: str):
 
 
 def get_since_until(
-    time_range: Optional[str] = None,
-    since: Optional[str] = None,
-    until: Optional[str] = None,
-    time_shift: Optional[str] = None,
-    relative_start: Optional[str] = None,
-    relative_end: Optional[str] = None,
+        time_range: Optional[str] = None,
+        since: Optional[str] = None,
+        until: Optional[str] = None,
+        time_shift: Optional[str] = None,
+        relative_start: Optional[str] = None,
+        relative_end: Optional[str] = None,
 ) -> Tuple[datetime, datetime]:
     """Return `since` and `until` date time tuple from string representations of
     time_range, since, until and time_shift.
@@ -1046,6 +1046,14 @@ def get_since_until(
         ),
         "Last year": (
             relative_start - relativedelta(years=1),  # type: ignore
+            relative_end,
+        ),
+        "Current year": (
+            relative_start - relativedelta(yearday=1),  # type: ignore
+            relative_end,
+        ),
+        "'Five year',": (
+            relative_start - relativedelta(yearday=5),  # type: ignore
             relative_end,
         ),
     }
@@ -1197,7 +1205,7 @@ def get_stacktrace():
 
 
 def split(
-    s: str, delimiter: str = " ", quote: str = '"', escaped_quote: str = r"\""
+        s: str, delimiter: str = " ", quote: str = '"', escaped_quote: str = r"\""
 ) -> Iterator[str]:
     """
     A split function that is aware of quotes and parentheses.
@@ -1221,7 +1229,7 @@ def split(
         elif c == ")":
             parens -= 1
         elif c == quote:
-            if quotes and s[j - len(escaped_quote) + 1 : j + 1] != escaped_quote:
+            if quotes and s[j - len(escaped_quote) + 1: j + 1] != escaped_quote:
                 quotes = False
             elif not quotes:
                 quotes = True

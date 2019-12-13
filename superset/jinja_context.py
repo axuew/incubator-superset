@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 """Defines the templating context for SQL Lab"""
+# -*- coding: gbk -*-
+
 import inspect
 import json
 from typing import Any, List, Optional, Tuple
@@ -24,6 +26,89 @@ from jinja2.sandbox import SandboxedEnvironment
 
 from superset import jinja_base_context
 
+from superset import app, security_manager
+def get_data_permission(columns: str = '*', where_type: int = None) -> Optional[str]:
+    from superset import db
+    from superset.models import core as models
+    import pandas as pd
+    from superset.sql_parse import ParsedQuery
+    database = db.session.query(models.Database).filter_by(database_name='main').first()
+    engine = database.sqlalchemy_uri_decrypted
+    user = security_manager.find_user(username=g.user.username)
+    user_role = [str(i) for i in user.roles]
+    where_type = str(where_type)
+    if "*" == columns:
+        if '1' == where_type:
+            sql_statement = "SELECT zpertyp,vkorg,spart,begru,kunnr FROM data_permission where 1=1"
+        elif '2' == where_type:
+            sql_statement = "SELECT zpertyp,vkorg,department_a FROM data_permission where 1=1"
+        else:
+            sql_statement = "SELECT zpertyp FROM data_permission where 1=2 "
+    else:
+        columns_condition = "zpertyp"
+        for colum in columns.split(","):
+            columns_condition += "".join(",{}").format(colum)
+        sql_statement = "SELECT {} FROM data_permission where 1=1 ".format(columns_condition)
+    if where_type:
+        sql_condition = (sql_statement + " and per_type = '{}' ").format(where_type)
+    else:
+        return ' and 1 = 2'
+    if "Admin" in user_role:
+        sql_statements = sql_condition
+    else:
+        sql_statements = (sql_condition + " and username in ('{}')").format(g.user.username)
+    parsed_query = ParsedQuery(sql_statements)
+    sql = parsed_query.stripped()
+    df = pd.read_sql(sql=sql, con=engine)
+    if len(df.values) == 0:
+        return ' and 1 = 2 '
+    if len(df['zpertyp']) > 1:
+        for i in list(set(df['zpertyp'])):
+            if "AA" == i:
+                _role = 'AA'
+                break
+            else:
+                _role = ''
+    else:
+        _role = list(set(df['zpertyp']))
+    df.drop(['zpertyp'], axis=1, inplace=True)
+    result = ''
+    for colum in df.columns.tolist():
+        if '1' == where_type:
+            if 'AA' == _role:
+                if 'vkorg' == colum or 'kunnr' == colum or 'spart' == colum or 'begru' == colum:
+                    df.drop([colum], axis=1, inplace=True)
+            elif 'F1' == _role or 'F2' == _role:
+                if 'kunnr' == colum or 'spart' == colum or 'begru' == colum:
+                    df.drop([colum], axis=1, inplace=True)
+            elif 'Z5' == _role or 'Z4' == _role or 'Z3' == _role:
+                if 'kunnr' == colum or 'begru' == colum:
+                    df.drop([colum], axis=1, inplace=True)
+        if '2' == where_type:
+            if 'AA' == _role or "Admin" in user_role:
+                if 'vkorg' == colum or 'department_a' == colum:
+                    df.drop([colum], axis=1, inplace=True)
+    for colum in df.columns.tolist():
+        value = tuple(set(df[colum]))
+        if len(value) == 1:
+            if value[0] == '':
+                pass
+            else:
+                if "department_a" == colum and '2' == where_type:
+                    result += "".join(" and {} like ('{}%')".format(colum, value[0]))
+                else:
+                    result += "".join(" and {} in ('{}')".format(colum, value[0]))
+        elif len(value) <= 0:
+            pass
+        else:
+            result += "".join(" and {} in {}".format(colum, value))  # tuple(set(df[colum]))
+    if result:
+        return result
+    else:
+        if 'AA' == _role or "Admin" in user_role:
+            return ''
+        else:
+            return ' and 1 = 2'
 
 def url_param(param: str, default: Optional[str] = None) -> Optional[Any]:
     """Read a url or post parameter and use it in your SQL Lab query
@@ -190,6 +275,7 @@ class BaseTemplateProcessor:  # pylint: disable=too-few-public-methods
             "cache_key_wrapper": CacheKeyWrapper(extra_cache_keys).cache_key_wrapper,
             "filter_values": filter_values,
             "form_data": {},
+            "get_data_permission": get_data_permission,
         }
         self.context.update(kwargs)
         self.context.update(jinja_base_context)

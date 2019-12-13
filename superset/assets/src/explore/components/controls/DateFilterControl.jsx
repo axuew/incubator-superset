@@ -62,6 +62,8 @@ const COMMON_TIME_FRAMES = [
   'Last month',
   'Last quarter',
   'Last year',
+  'Current year',
+  'Five year',
   'No filter',
 ];
 const TIME_GRAIN_OPTIONS = [
@@ -127,6 +129,15 @@ function getStateFromSeparator(value) {
 }
 
 function getStateFromCommonTimeFrame(value) {
+  if (value == "Current year") {
+        return {
+            tab: TABS.DEFAULTS,
+            type: TYPES.DEFAULTS,
+            common: value,
+            since: moment().startOf('day').dayOfYear(1).format(MOMENT_FORMAT),
+            until: moment().startOf('day').format(MOMENT_FORMAT),
+        };
+    }
   const units = value.split(' ')[1] + 's';
   return {
     tab: TABS.DEFAULTS,
