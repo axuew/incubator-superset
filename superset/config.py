@@ -121,7 +121,7 @@ SECRET_KEY = (
 )
 
 # The SQLAlchemy connection string.
-# SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(DATA_DIR, "superset.db")
+#SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(DATA_DIR, "superset.db")
 SQLALCHEMY_DATABASE_URI = 'mysql://superset:superset@172.16.97.142/superset'
 # SQLALCHEMY_DATABASE_URI = 'mysql://myapp@localhost/myapp'
 # SQLALCHEMY_DATABASE_URI = 'postgresql://root:password@localhost/myapp'
@@ -345,7 +345,7 @@ FEATURE_FLAGS = {
         # link to the scheduler; this example links to an Airflow pipeline
         # that uses the query id and the output table as its name
         'linkback': (
-            'https://airflow.example.com/admin/airflow/tree?'
+            'http://172.16.97.141/airflow/admin/airflow/tree?'
             'dag_id=query_${id}_${extra_json.schedule_info.output_table}'
         ),
     },
@@ -381,10 +381,12 @@ IMG_UPLOAD_URL = "/static/uploads/"
 # Setup image size default is (300, 200, True)
 # IMG_SIZE = (300, 200, True)
 
-CACHE_DEFAULT_TIMEOUT = 60 * 60 * 24
+# CACHE_DEFAULT_TIMEOUT = 60 * 60 * 24
+CACHE_DEFAULT_TIMEOUT = 60 * 5
+
 CACHE_CONFIG = {
     'CACHE_TYPE': 'redis',
-    'CACHE_REDIS_HOST': '172.29.15.46',
+    'CACHE_REDIS_HOST': '172.16.97.141',
     'CACHE_REDIS_PORT': '6379',
     'CACHE_KEY_PREFIX': 'superset_results',
     'CACHE_REDIS_URL': 'redis://172.16.97.141:6379/'
@@ -769,7 +771,7 @@ WEBDRIVER_WINDOW = {"dashboard": (1600, 2000), "slice": (3000, 1200)}
 WEBDRIVER_CONFIGURATION: Dict[Any, Any] = {}
 
 # The base URL to query for accessing the user interface
-WEBDRIVER_BASEURL = "http://172.16.97.124:9521/"
+WEBDRIVER_BASEURL = "http://172.16.97.141:9521/"
 
 # Send user to a link where they can report bugs
 BUG_REPORT_URL = None
