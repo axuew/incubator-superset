@@ -235,14 +235,15 @@ class RowLevelSecurityFiltersModelView(SupersetModelView, DeleteMixin):
     add_title = _("Add Row level security filter")
     edit_title = _("Edit Row level security filter")
 
-    list_columns = ["table", "roles", "clause", "creator", "modified"]
-    order_columns = ["modified"]
-    edit_columns = ["table", "roles", "clause"]
+    list_columns = ["users", "roles", "table", "clause", "creator", "modified"]
+    order_columns = ["users", "roles", "table", "modified"]
+    edit_columns = ["users", "roles", "table", "clause"]
     show_columns = edit_columns
-    search_columns = ("table", "roles", "clause")
+    search_columns = ("users", "roles", "table", "clause")
     add_columns = edit_columns
     base_order = ("changed_on", "desc")
     description_columns = {
+        "users": _("This is the users this filter will be applied to."),
         "table": _("This is the table this filter will be applied to."),
         "roles": _("These are the roles this filter will be applied to."),
         "clause": _(
@@ -251,12 +252,31 @@ class RowLevelSecurityFiltersModelView(SupersetModelView, DeleteMixin):
         ),
     }
     label_columns = {
+        "users": _("Users"),
         "table": _("Table"),
         "roles": _("Roles"),
         "clause": _("Clause"),
         "creator": _("Creator"),
         "modified": _("Modified"),
     }
+
+    @action(
+        "Copy RowLevelSecurityFilters",
+        _("Copy RowLevelSecurityFilters"),
+        _("Copy the selected RowLevelSecurityFilters?"),
+        icon="fa-copy",
+        single=False,
+    )
+    def copy_role(self, items):
+        self.update_redirect()
+        for item in items:
+            new_role = item.__class__()
+            new_role.users = item.users
+            new_role.roles = item.roles
+            new_role.table = item.table
+            new_role.clause = item.clause
+            self.datamodel.add(new_role)
+        return redirect(self.get_redirect())
 
 
 appbuilder.add_view(

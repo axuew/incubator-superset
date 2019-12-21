@@ -1192,7 +1192,13 @@ RLSFilterRoles = Table(
     Column("role_id", Integer, ForeignKey("ab_role.id"), nullable=False),
     Column("rls_filter_id", Integer, ForeignKey("row_level_security_filters.id")),
 )
-
+RLSFilterUsers = Table(
+    "rls_filter_users",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("user_id", Integer, ForeignKey("ab_user.id"), nullable=False),
+    Column("rls_filter_id", Integer, ForeignKey("row_level_security_filters.id")),
+)
 
 class RowLevelSecurityFilter(Model, AuditMixinNullable):
     """
@@ -1201,6 +1207,12 @@ class RowLevelSecurityFilter(Model, AuditMixinNullable):
 
     __tablename__ = "row_level_security_filters"
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    users = relationship(
+        security_manager.user_model,
+        secondary=RLSFilterUsers,
+        backref="row_level_security_filters",
+    )
+
     roles = relationship(
         security_manager.role_model,
         secondary=RLSFilterRoles,

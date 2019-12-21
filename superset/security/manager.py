@@ -891,7 +891,7 @@ class SupersetSecurityManager(SecurityManager):
             return [
                 f.clause
                 for f in table.row_level_security_filters
-                if any(r.id in roles for r in f.roles)
+                if any(r.id in [g.user.id] for r in f.users) and any(r.id in roles for r in f.roles)
             ]
         except AttributeError:
             return []
@@ -908,7 +908,7 @@ class SupersetSecurityManager(SecurityManager):
             ids = [
                 f.id
                 for f in table.row_level_security_filters
-                if any(r.id in roles for r in f.roles)
+                if any(r.id in [g.user.id] for r in f.users) and any(r.id in roles for r in f.roles)
             ]
             ids.sort()  # Combinations rather than permutations
             return ids
